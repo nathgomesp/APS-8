@@ -1,0 +1,313 @@
+### MANUAL_DE_RODAGEM — execução local passo a passo completo (PROJETOS: aps_1 backend e qualidade_ar_app frontend)
+
+Resumo rápido: manual completo para o avaliador instalar, configurar e executar localmente o backend Python (projeto aps_1 — estrutura mostrada na imagem do PyCharm) e o app Flutter Android (workspace qualidade_ar_app — estrutura mostrada na imagem do VSCode). **A execução do frontend é garantida apenas no Android Emulator** devido à configuração de rede para acesso ao backend local. Instruções sobre notificações foram removidas. O backend usa a porta 5000. **O uso de Docker para o backend é obrigatório.** Arquivo final sugerido: MANUAL_DE_RODAGEM.txt (encoding UTF-8).
+
+---
+
+### 1. Pré-requisitos do sistema (instalar antes de começar)
+- SO suportados: Windows 10/11, macOS, Linux com suporte a Android Emulator.  
+- **Docker Desktop instalado e em execução (Obrigatório).**  
+- VSCode + extensão Flutter (Dart & Flutter).  
+- Android Studio (SDK, AVD Manager, Android Emulator).  
+- Android SDK: Platform 33 (ou >= targetSdk), Platform Tools, Build-Tools compatível.  
+- JDK 17 instalado; configurar JAVA_HOME apontando para ele.  
+- Flutter SDK compatível com a versão do projeto.  
+- Python 3.9+ instalado (necessário para o Docker build).  
+- Git (para clonar repositório).  
+- Conexão com a internet.
+
+Observação: não commitar chaves sensíveis. Mantê-las localmente (ex.: arquivos JSON, Google keys, .env).
+
+---
+
+### 2. Estrutura dos projetos (conforme imagens fornecidas)
+- Backend (PyCharm) — projeto aps_1 (ex.: C:\Users\soler\PycharmProjects\aps_1)
+  - .venv (virtualenv)
+  - routes/ (air_quality.py, alerts.py, enderecos.py, usuarios.py)
+  - services/ (external_api.py, notifications.py, arquivo JSON de credenciais)
+  - app.py (entrada principal)
+  - dockerfile, .dockerignore
+  - models.py, requirements.txt
+- Frontend (VSCode) — workspace qualidade_ar_app
+  - android/, ios/, lib/, build/, test/, pubspec.yaml, firebase.json, etc.
+
+Use essas estruturas para localizar arquivos, Dockerfile e caminhos de build.
+
+---
+
+### 3. Arquivos e configurações locais obrigatórios
+- Arquivos sensíveis (ex.: credenciais JSON, google-services.json) devem ser colocados localmente nos diretórios corretos e nunca versionados.  
+- Criar .env no backend com variáveis necessárias (exemplo abaixo). Nunca commitar .env.
+
+Exemplo mínimo .env:
+FLASK_ENV=development
+PORT=5000
+DATABASE_URL=sqlite:///data.db
+
+---
+
+### 4. Configuração do Android Studio e Emulador (Obrigatório)
+
+**1. Instalar SDKs e JDK**
+- Abra Android Studio → Configure → SDK Manager. ou Abra Android Studio →More actions → SDK Manager. 
+- Em **SDK Platforms**, marque a API Level que seu projeto usa e instale.  
+- Em **SDK Tools**, marque **Android SDK Platform-Tools** e **Android SDK Build-Tools**; aplique.  
+- Em File → Settings → Build, Execution, Deployment → Build Tools verifique o JDK (recomendo JDK 11).  
+
+**2. Acessar SDK Manager a partir de More Actions**
+- Na tela de boas-vindas do Android Studio, clique em **More Actions** → **SDK Manager**.  
+- Confirme e instale componentes necessários (Platform SDK, Platform-Tools, Build-Tools).  
+
+**3. Configurar variáveis de ambiente (opcional mas recomendado)**
+- No sistema defina `ANDROID_SDK_ROOT` (ou `ANDROID_HOME`) apontando para a pasta SDK (ex.: `C:\Users\<you>\AppData\Local\Android\Sdk`).  
+- Defina `JAVA_HOME` para o diretório do JDK instalado.  
+- Reinicie o Android Studio se alterou variáveis.
+
+**4. Criar AVD (emulador)**
+- Menu inicial → More Actions -- AVD Manager → Create Virtual Device. ou Tools → AVD Manager → Create Virtual Device. 
+- Escolha um dispositivo (ex.: Pixel 4).  
+- Ao escolher System Image selecione uma imagem com **Google Play** (importante para FCM) e baixe se necessário.  
+- Configure as opções (RAM/ABI) e finalizar a criação.
+
+**5. Ajustes do AVD recomendados**
+- Em Advanced Settings do AVD, mantenha **Device frame** e **Graphics** em Automatic; se tiver problemas de performance, troque para Software.  
+- Confirme que a ABI é compatível com seu build (x86_64 para imagens de emulador com aceleração).
+
+**6. Iniciar o emulador**
+- No AVD Manager, clique em Play (►) ao lado do AVD criado para inicializá-lo.  
+- Aguarde o boot completo (pode demorar na primeira vez). Verifique que a Play Store/Google Play Services estejam presentes se a image tiver Google Play.
+
+**7. Verificar disponibilidade para o Flutter**
+- No terminal do projeto Flutter rode:
+  ```bash
+  flutter devices
+  ```
+  para confirmar que o emulador aparece como dispositivo conectado.  
+- Rode:
+  ```bash
+  flutter doctor
+  ```
+  e corrija quaisquer alertas relativos ao Android toolchain.
+
+---
+
+### 5. Backend (aps_1) — abrir no PyCharm e execução com Docker (Obrigatório)
+
+1. Abra o projeto aps_1 no PyCharm (confirme a estrutura: app.py, routes/, services/, requirements.txt).  
+2. **Execução via Docker (Obrigatório):**
+   - No diretório que contém o Dockerfile:
+     ```bash
+     docker build -t air-quality-api .
+     ```
+   - Rodar o container mapeando porta 5000:
+     ```bash
+     docker run --rm -p 5000:5000 air-quality-api
+     ```
+   - Ver logs do container (se necessário):
+     ```bash
+     docker logs -f <container-id>
+     ```
+   - Testar endpoint:
+     Abra `http://localhost:5000/health` (ou rota definida).
+
+Observação: backend deve escutar na porta 5000 para que o app mobile se conecte. Confirme o mapeamento `-p 5000:5000`.
+
+---
+
+### 6. Frontend (qualidade_ar_app) — abrir no VSCode e executar
+
+1. **Certifique-se de que o Android Emulator está iniciado (conforme Seção 4).**
+2. Abra o workspace qualidade_ar_app no VSCode com a extensão Flutter ativa.  
+3. No terminal do VSCode (raiz do projeto) execute:
+   ```bash
+   flutter clean
+   flutter pub get
+   ```
+4. Verifique dispositivo/emulador:
+   ```bash
+   flutter devices
+   ```
+   ou
+   ```bash
+   adb devices
+   ```
+5. Rodar em modo desenvolvimento:
+   ```bash
+   flutter run
+   ```
+
+Fallback se `flutter run` falhar:
+- No diretório android (Windows):
+  ```bash
+  cd android
+  .\gradlew.bat clean assembleRelease
+  ```
+- Em seguida, instalar o APK release (volte ao caminho apropriado se necessário):
+  ```bash
+  adb install -r app\build\outputs\apk\release\app-release.apk
+  ```
+
+Observações:
+- Se ocorrer erro de Gradle relacionado ao JDK, edite `android/gradle.properties` e adicione:
+  ```
+  org.gradle.java.home=C:\\Program Files\\Java\\jdk-17.0.x
+  ```
+  (use o caminho real do JDK 17 instalado)
+- Ajuste paths se seu projeto estiver em local diferente.
+
+---
+
+### 7. Sequência recomendada de abertura e execução (ordem precisa)
+
+1. Instalar pré-requisitos (Docker, Android Studio, VSCode + Flutter, JDK 17, Python).  
+2. **Configurar o Android Studio e iniciar o Android Emulator (Seção 4).**
+3. Abrir projeto backend **aps_1** no PyCharm.  
+4. Abrir Docker Desktop e, na pasta do backend, executar:
+   ```bash
+   docker build -t air-quality-api .
+   docker run --rm -p 5000:5000 air-quality-api
+   ```
+5. Abrir workspace **qualidade_ar_app** no VSCode (extensão Flutter).  
+6. No terminal do VSCode (raiz do frontend):
+   ```bash
+   flutter clean
+   flutter pub get
+   ```
+7. No terminal do VSCode rodar:
+   ```bash
+   flutter run
+   ```
+   Se não funcionar, seguir o fallback do item 6 para gerar e instalar o APK release.  
+8. Ver logs com `flutter logs` e `adb logcat` para diagnosticar erros.  
+9. Se necessário, remover APKs gerados (ver seção 8).  
+10. Para qualquer falha, coletar trechos do log com mensagens de erro (“Caused by”, “Exception”, stacktrace) e enviar ao autor do projeto.
+
+---
+
+### 8. Comandos úteis de verificação e troubleshooting
+
+- Ver dispositivos conectados:
+  ```bash
+  adb devices
+  ```
+
+- Logs Flutter:
+  ```bash
+  flutter logs
+  ```
+
+- Logs do Android (filtrar por termos relevantes):
+  ```bash
+  adb logcat
+  ```
+
+- Forçar refresh de dependências Gradle:
+  ```bash
+  cd android
+  .\gradlew.bat --refresh-dependencies
+  ```
+
+- Build com logs detalhados:
+  ```bash
+  cd android
+  .\gradlew.bat assembleDebug --stacktrace --info
+  ```
+
+- Se encontrar erro de desugaring (desugar_jdk_libs), confirme em `android/app/build.gradle(.kts)` as opções de `compileOptions` e dependência `coreLibraryDesugaring`.
+
+---
+
+### 9. Remover APKs gerados (scripts de exemplo para adaptar ao caminho do avaliador)
+
+Substitua `CAMINHO_PROJ` pelo caminho absoluto do projeto no PC.
+
+- Windows PowerShell:
+  ```powershell
+  Remove-Item -Path "C:\CAMINHO_PROJ\android\app\build\outputs\apk\debug\app-debug.apk" -Force -ErrorAction SilentlyContinue
+  Remove-Item -Path "C:\CAMINHO_PROJ\android\app\build\outputs\apk\release\app-release.apk" -Force -ErrorAction SilentlyContinue
+  Get-ChildItem -Path "C:\CAMINHO_PROJ\android\app\build\outputs\apk" -Recurse -Filter *.apk | Remove-Item -Force -ErrorAction SilentlyContinue
+  ```
+
+- macOS / Linux (bash):
+  ```bash
+  rm -f "/home/usuario/CAMINHO_PROJ/android/app/build/outputs/apk/debug/app-debug.apk"
+  rm -f "/home/usuario/CAMINHO_PROJ/android/app/build/outputs/apk/release/app-release.apk"
+  find "/home/usuario/CAMINHO_PROJ/android/app/build/outputs/apk" -name "*.apk" -type f -delete
+  ```
+
+Use esses comandos com cuidado — eles removem arquivos permanentemente.
+
+---
+
+### 10. Observações finais e dicas rápidas\n\n- **Atenção:** O projeto, por padrão, está configurado para rodar apenas no **Android Emulator** devido ao uso do endereço `10.0.2.2:5000` para acessar o backend local. Para rodar em um celular físico, siga as instruções da **Seção 11** abaixo.
+
+- Confirme que o backend (Docker) está acessível em `http://localhost:5000` antes de abrir o app.  
+- Se o app falhar ao se comunicar com o backend, verifique CORS, endpoints e URLs configuradas no Flutter. **A execução é garantida apenas no Android Emulator** porque o endereço `10.0.2.2:5000` é o IP especial que o emulador usa para acessar o `localhost:5000` da máquina hospedeira. Em um dispositivo físico, seria necessário configurar o app para usar o IP de rede local da máquina hospedeira (ex: `http://192.168.x.x:5000`) e garantir que o firewall da máquina hospedeira permita a conexão, o que é um cenário mais complexo e não coberto por este manual. **Portanto, use o Android Emulator.**  
+- Ajuste `applicationId`/`namespace` no `android/app/build.gradle(.kts)` conforme arquivos locais (ex.: `google-services.json`) se aplicável.  
+- Mantenha credenciais fora do repositório e documente localmente onde cada arquivo sensível deve ficar.
+
+---
+
+### 11. 📱 Rodagem do APK em Celular Físico via IP Local (Opcional)
+
+Esta seção detalha como configurar o ambiente para que o aplicativo (após a compilação do APK) possa se comunicar com o backend em Docker, rodando na sua máquina, a partir de um celular físico. **É crucial que o PC e o celular estejam na mesma rede Wi-Fi.**
+
+#### Passo 1 — Descobrir o IP do PC
+- No **Windows**, abra o Prompt de Comando e digite:
+  ```
+  ipconfig
+  ```
+  Procure pelo campo **Endereço IPv4** (ex.: `192.168.1.42`).
+- No **Linux/Mac**, use:
+  ```
+  ifconfig
+  ```
+  ou
+  ```
+  ip a
+  ```
+  Procure pelo IP da interface de rede (ex.: `192.168.0.15`).
+
+#### Passo 2 — Configurar o backend para aceitar conexões externas
+O Docker, por padrão, já mapeia a porta 5000 para `0.0.0.0` na máquina hospedeira, o que permite conexões externas. **Não é necessário alterar o código do backend**, mas certifique-se de que o comando de execução do Docker foi:
+```bash
+docker run --rm -p 5000:5000 air-quality-api
+```
+
+#### Passo 3 — Liberar a porta no firewall
+- **Windows**: abra “Firewall do Windows com Segurança Avançada” → Regras de Entrada → Nova Regra → Porta → TCP 5000 → Permitir.
+- **Linux/Mac**: se usar `ufw`, rode:
+  ```bash
+  sudo ufw allow 5000
+  ```
+
+#### Passo 4 — Alterar a URL no app Flutter
+No código Flutter, substitua o endereço do backend (que aponta para o emulador):
+```dart
+const backendBaseUrl = "http://10.0.2.2:5000";
+```
+por:
+```dart
+const backendBaseUrl = "http://192.168.1.42:5000";
+```
+(use o IP real do seu PC, descoberto no Passo 1).
+
+#### Passo 5 — Conectar celular e PC na mesma rede
+- O celular físico precisa estar conectado à **mesma rede Wi‑Fi** que o PC.
+- Se estiver em outra rede (ex.: 4G), não funcionará.
+
+#### Passo 6 — Testar a conexão
+No navegador do celular, acesse:
+```
+http://192.168.1.42:5000/health
+```
+Se aparecer resposta (ex: `{"status": "ok"}`), significa que o backend está acessível.
+
+#### ⚠️ Observação Importante: Transferência do APK
+Após compilar o projeto no **VS Code** ou Android Studio, o APK gerado precisa ser **transferido manualmente para o celular físico** (via cabo USB, e-mail, Google Drive, etc.) e instalado. Somente depois disso o app conseguirá se comunicar com o backend via IP local.
+
+---
+
+Encoding recomendado do arquivo MANUAL_DE_RODAGEM.txt: UTF-8.
+
+Fim do MANUAL_DE_RODAGEM.
